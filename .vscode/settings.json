@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "semphr.h": "c",
+    "task.h": "c",
+    "protocol_examples_common.h": "c"
+  }
+}
