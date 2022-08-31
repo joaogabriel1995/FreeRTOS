@@ -1,14 +1,23 @@
 #include <stdio.h>
-#include "nvs_flash.h"
 #include "esp_event.h"
-#include "esp_wifi.h"
 #include "esp_log.h"
-#include "wifi.h"
-#include "mqtt.h"
+#include "esp_wifi.h"
+#include "dht11.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "freertos/semphr.h"
+
+#include "mqtt.h"
+#include "nvs_flash.h"
+#include "wifi.h"
+
+#define GPIO_DHT11 2
 
 SemaphoreHandle_t connectionWifiSemaphore;
 SemaphoreHandle_t connectionMQTTSemaphore;
+
+xQueueHandle temperatureQueue;
 
 void ConectionWifi(void *pvParams)
 {
@@ -21,8 +30,30 @@ void ConectionWifi(void *pvParams)
   }
 }
 
+void dht11Read(void *pvParams)
+{
+
+  DHT11_init(GPIO_DHT11);
+
+  while (1)
+  {
+    int temp = DHT11_read().temperature;
+    ESP_LOGE("Sensor", "temperatura %d", temp);
+    long response = xQueueSend(temperatureQueue, &temp, 1000 / portTICK_PERIOD_MS);
+    if (response)
+    {
+      ESP_LOGI("Leitura", "Temperatura adicionada à fila,temperatura");
+    }
+    else
+    {
+      ESP_LOGE("Leitura", "Falha do envio da temperatura");
+    }
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+  }
+}
 void handleCommunicationWithBroker(void *pvParams)
 {
+  int temperatura = 0;
   while (true)
   {
     char payload[50];
@@ -30,10 +61,12 @@ void handleCommunicationWithBroker(void *pvParams)
     {
       while (true)
       {
-        float temp = 20.0 * (float)rand() / (float)(RAND_MAX / 10.0);
-        sprintf(payload, "temeperatura: %f", temp);
-        publish_data("topic/teste", payload);
-        vTaskDelay(3000 / portTICK_PERIOD_MS);
+        if (xQueueReceive(temperatureQueue, &temperatura, 3000 / portTICK_PERIOD_MS))
+        {
+          // sprintf(payload, "temeperatura: %d", temperatura);
+
+          // publish_data("topic/teste", payload);
+        }
       }
     }
   }
@@ -67,7 +100,10 @@ void app_main(void)
   ESP_ERROR_CHECK(ret);
   connectionWifiSemaphore = xSemaphoreCreateBinary();
   connectionMQTTSemaphore = xSemaphoreCreateBinary();
+
   wifi_start();
+  temperatureQueue = xQueueCreate(5, sizeof(float));
   xTaskCreate(&ConectionWifi, "WIFI", 4096, NULL, 1, NULL);
   xTaskCreate(&handleCommunicationWithBroker, "MQTT", 4096, NULL, 1, NULL);
+  xTaskCreate(&dht11Read, "DHT11", 4096, NULL, 1, NULL);
 }
