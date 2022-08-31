@@ -32,6 +32,8 @@ void ConectionWifi(void *pvParams)
 
 void dht11Read(void *pvParams)
 {
+  gpio_pad_select_gpio(GPIO_DHT11);
+  gpio_set_direction(GPIO_DHT11, GPIO_MODE_INPUT);
 
   DHT11_init(GPIO_DHT11);
 
