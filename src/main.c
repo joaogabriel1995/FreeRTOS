@@ -56,16 +56,16 @@ void handleCommunicationWithBroker(void *pvParams)
   int temperatura = 0;
   while (true)
   {
-    char payload[50];
+    char payload[20];
     if (xSemaphoreTake(connectionMQTTSemaphore, portMAX_DELAY))
     {
       while (true)
       {
         if (xQueueReceive(temperatureQueue, &temperatura, 3000 / portTICK_PERIOD_MS))
         {
-          // sprintf(payload, "temeperatura: %d", temperatura);
+          sprintf(payload, "temeperatura: %d", temperatura);
 
-          // publish_data("topic/teste", payload);
+          publish_data("topic/teste", payload);
         }
       }
     }
