@@ -103,7 +103,7 @@ void app_main(void)
 
   wifi_start();
   temperatureQueue = xQueueCreate(5, sizeof(float));
-  xTaskCreate(&ConectionWifi, "WIFI", 4096, NULL, 1, NULL);
-  xTaskCreate(&handleCommunicationWithBroker, "MQTT", 4096, NULL, 1, NULL);
-  xTaskCreate(&dht11Read, "DHT11", 4096, NULL, 1, NULL);
+  xTaskCreatePinnedToCore(&ConectionWifi, "WIFI", 4096, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(&handleCommunicationWithBroker, "MQTT", 4096, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(&dht11Read, "DHT11", 4096, NULL, 1, NULL, 1);
 }
